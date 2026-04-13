@@ -138,6 +138,81 @@ namespace Mattermost
             _serverUri = serverUri;
             _http = new HttpClient() { BaseAddress = _serverUri, Timeout = TimeSpan.FromMinutes(1) };
         }
+        
+        /// <summary>
+        /// Create <see cref="MattermostClient"/> with custom HttpClient.
+        /// </summary>
+        /// <param name="serverUri"> Server URI with HTTP(S) scheme. </param>
+        /// <param name="httpClient"> Custom HttpClient instance. </param>
+        /// <exception cref="ArgumentException"></exception>
+        public MattermostClient(Uri serverUri, HttpClient httpClient) : this(serverUri)
+        {
+            if (httpClient == null)
+            {
+                throw new ArgumentNullException(nameof(httpClient));
+            }
+    
+            // Dispose the default HttpClient and replace with custom one
+            _http.Dispose();
+            _http = httpClient;
+    
+            // Ensure BaseAddress is set if not already
+            if (_http.BaseAddress == null)
+            {
+                _http.BaseAddress = _serverUri;
+            }
+    
+            // Ensure timeout is set if not already
+            if (_http.Timeout == TimeSpan.FromMilliseconds(-1)) // Not set (or default)
+            {
+                _http.Timeout = TimeSpan.FromMinutes(1);
+            }
+        }
+        
+        /// <summary>
+        /// Create <see cref="MattermostClient"/> with custom HttpClient and API key.
+        /// </summary>
+        /// <param name="serverUri"> Server URI with HTTP(S) scheme. </param>
+        /// <param name="apiKey"> API key, ex. bot token or personal access token. </param>
+        /// <param name="httpClient"> Custom HttpClient instance. </param>
+        public MattermostClient(Uri serverUri, string apiKey, HttpClient httpClient) : this(serverUri, apiKey)
+        {
+            if (httpClient == null)
+            {
+                throw new ArgumentNullException(nameof(httpClient));
+            }
+    
+            // Dispose the default HttpClient and replace with custom one
+            _http.Dispose();
+            _http = httpClient;
+    
+            // Ensure BaseAddress is set if not already
+            if (_http.BaseAddress == null)
+            {
+                _http.BaseAddress = _serverUri;
+            }
+    
+            // Ensure timeout is set if not already
+            if (_http.Timeout == TimeSpan.FromMilliseconds(-1)) // Not set (or default)
+            {
+                _http.Timeout = TimeSpan.FromMinutes(1);
+            }
+        }
+        
+        /// <summary>
+        /// Create <see cref="MattermostClient"/> with custom HttpClient (string URL overload).
+        /// </summary>
+        /// <param name="serverUrl"> Server URL with HTTP(S) scheme. </param>
+        /// <param name="httpClient"> Custom HttpClient instance. </param>
+        public MattermostClient(string serverUrl, HttpClient httpClient) : this(new Uri(serverUrl), httpClient) { }
+        
+        /// <summary>
+        /// Create <see cref="MattermostClient"/> with custom HttpClient and API key (string URL overload).
+        /// </summary>
+        /// <param name="serverUrl"> Server URL with HTTP(S) scheme. </param>
+        /// <param name="apiKey"> API key, ex. bot token or personal access token. </param>
+        /// <param name="httpClient"> Custom HttpClient instance. </param>
+        public MattermostClient(string serverUrl, string apiKey, HttpClient httpClient) : this(new Uri(serverUrl), apiKey, httpClient) { }
 
         /// <summary>
         /// Start receiving messages asynchronously with cancellation token.
