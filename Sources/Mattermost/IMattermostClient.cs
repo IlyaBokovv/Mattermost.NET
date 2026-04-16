@@ -57,8 +57,13 @@ namespace Mattermost
         /// <summary>
         /// Create receiver <see cref="Task"/> with websocket polling.
         /// </summary>
+        /// <param name="includeCurrentUserPosts">
+        /// Whether to raise <see cref="OnMessageReceived"/> for posts created by the currently authorized user (e.g. the bot itself).
+        /// Default is <c>false</c> to preserve existing behavior (filter out current user's posts).
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token that cancels the receiving loop.</param>
         /// <returns> Receiver task. </returns>
-        Task StartReceivingAsync(CancellationToken cancellationToken = default);
+        Task StartReceivingAsync(bool includeCurrentUserPosts = false, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Stop receiving messages.

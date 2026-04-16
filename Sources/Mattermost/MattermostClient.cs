@@ -25,7 +25,7 @@ namespace Mattermost
     {
         /// <summary>
         /// Called when client is connected to server WebSocket after
-        /// <see cref="StartReceivingAsync(CancellationToken)"/> method.
+        /// <see cref="StartReceivingAsync(bool, CancellationToken)"/> method.
         /// </summary>
         public event EventHandler<ConnectionEventArgs>? OnConnected;
 
@@ -37,7 +37,7 @@ namespace Mattermost
 
         /// <summary>
         /// Event called when new message received.
-        /// You have to call <see cref="StartReceivingAsync(CancellationToken)"/> method to start receiving messages.
+        /// You have to call <see cref="StartReceivingAsync(bool, CancellationToken)"/> method to start receiving messages.
         /// </summary>
         public event EventHandler<MessageEventArgs>? OnMessageReceived;
 
@@ -48,7 +48,7 @@ namespace Mattermost
 
         /// <summary>
         /// Event called when user status updated.
-        /// You have to call <see cref="StartReceivingAsync(CancellationToken)"/> method to start receiving status updates.
+        /// You have to call <see cref="StartReceivingAsync(bool, CancellationToken)"/> method to start receiving status updates.
         /// </summary>
         public event EventHandler<UserStatusChangeEventArgs>? OnStatusUpdated;
 
@@ -85,6 +85,7 @@ namespace Mattermost
         private ClientWebSocket _ws;
         private Task? _receiverTask;
         private User? _cachedUserInfo;
+        private bool _includeCurrentUserPosts;
         private readonly Uri _serverUri;
         private readonly string? _apiKey;
         private readonly HttpClient _http;
@@ -144,15 +145,21 @@ namespace Mattermost
         /// <summary>
         /// Start receiving messages asynchronously with cancellation token.
         /// </summary>
+        /// <param name="includeCurrentUserPosts">
+        /// Whether to raise <see cref="OnMessageReceived"/> for posts created by the currently authorized user (e.g. the bot itself).
+        /// Default is <c>false</c> to preserve existing behavior (filter out current user's posts).
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token that cancels the receiving loop.</param>
         /// <returns> Receiver task. </returns>
         /// <exception cref="ApiKeyException"></exception>
-        public async Task StartReceivingAsync(CancellationToken cancellationToken = default)
+        public async Task StartReceivingAsync(bool includeCurrentUserPosts = false, CancellationToken cancellationToken = default)
         {
             CheckDisposed();
             await CheckAuthorizedAsync();
             await StopReceivingAsync();
             _ws = new ClientWebSocket();
             _receivingTokenSource = new CancellationTokenSource();
+            _includeCurrentUserPosts = includeCurrentUserPosts;
             var mergedToken = CancellationTokenSource.CreateLinkedTokenSource(_receivingTokenSource.Token, cancellationToken).Token;
 
             Log("Starting receiving as user @" + _cachedUserInfo?.Username ?? "Unknown");
@@ -302,7 +309,9 @@ namespace Mattermost
             {
                 case MattermostEvent.Posted:
                     var messageArgs = new MessageEventArgs(this, response, cancellationToken);
-                    if (_cachedUserInfo != null && messageArgs.Message.Post.UserId != _cachedUserInfo.Id)
+                    if (_includeCurrentUserPosts
+                        || _cachedUserInfo == null
+                        || messageArgs.Message.Post.UserId != _cachedUserInfo.Id)
                     {
                         OnMessageReceived?.Invoke(this, messageArgs);
                     }
